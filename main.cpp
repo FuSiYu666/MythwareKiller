@@ -10,9 +10,11 @@ int max_y = GetSystemMetrics(SM_CYSCREEN);
 #pragma comment(lib, "psapi.lib")
 string mythwarePath = "";
 
-string GetProcessPath(const char* processName) {
+string GetProcessPath(const char *processName)
+{
     HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+    if (hProcessSnap == INVALID_HANDLE_VALUE)
+    {
         cerr << "创建进程快照失败!" << endl;
         return "";
     }
@@ -20,18 +22,23 @@ string GetProcessPath(const char* processName) {
     PROCESSENTRY32 pe32;
     pe32.dwSize = sizeof(PROCESSENTRY32);
 
-    if (!Process32First(hProcessSnap, &pe32)) {
+    if (!Process32First(hProcessSnap, &pe32))
+    {
         cerr << "获取第一个进程信息失败!" << endl;
         CloseHandle(hProcessSnap);
         return "";
     }
 
-    do {
-        if (_stricmp(pe32.szExeFile, processName) == 0) {
+    do
+    {
+        if (_stricmp(pe32.szExeFile, processName) == 0)
+        {
             HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pe32.th32ProcessID);
-            if (hProcess != NULL) {
+            if (hProcess != NULL)
+            {
                 char path[MAX_PATH];
-                if (GetModuleFileNameExA(hProcess, NULL, path, MAX_PATH)) {
+                if (GetModuleFileNameExA(hProcess, NULL, path, MAX_PATH))
+                {
                     CloseHandle(hProcess);
                     CloseHandle(hProcessSnap);
                     return path;
@@ -112,17 +119,17 @@ void unblockNetwork()
     system("netsh advfirewall set allprofiles state off");
 }
 
-void RestoreWindowFreedom(HWND hWnd) {
+void RestoreWindowFreedom(HWND hWnd)
+{
     LONG_PTR style = GetWindowLongPtr(hWnd, GWL_STYLE);
     style |= WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
     SetWindowLongPtr(hWnd, GWL_STYLE, style);
     LONG_PTR exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
     exStyle &= ~(WS_EX_TOPMOST | WS_EX_TOOLWINDOW);
     SetWindowLongPtr(hWnd, GWL_EXSTYLE, exStyle);
-    SetWindowPos(hWnd, NULL, 0, 0, 0, 0, 
+    SetWindowPos(hWnd, NULL, 0, 0, 0, 0,
                  SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
-
 
 bool ToggleBroadcastWindow()
 {
@@ -131,14 +138,14 @@ bool ToggleBroadcastWindow()
     {
         return false;
     }
-    
+
     PostMessage(hwndBroadcast, WM_COMMAND, WPARAM((BN_CLICKED << 16) | 1004), NULL);
-    
+
     return true;
 }
 
 int main()
-{ 
+{
     cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
 严禁搬运，转载，否则后果自负!)";
     cout << "屏幕分辨率:" << max_x << "x" << max_y << "\n";
@@ -148,9 +155,12 @@ int main()
     else
         cout << "极域PID: " << PID << "\n";
     mythwarePath = GetProcessPath("StudentMain.exe");
-    if (!mythwarePath.empty()) {
+    if (!mythwarePath.empty())
+    {
         cout << "极域安装路径: " << mythwarePath << endl;
-    } else {
+    }
+    else
+    {
         cerr << "未找到极域进程!\n";
     }
     system("start .\\keyboardProtect.exe");
@@ -185,8 +195,10 @@ int main()
         {
             cout << "右上-使广播窗口化  ";
             bool status = ToggleBroadcastWindow();
-            if(status) cout << "操作成功! \n";
-            else cout << "操作失败! \n";
+            if (status)
+                cout << "操作成功! \n";
+            else
+                cout << "操作失败! \n";
             _sleep(700);
         }
         if (x >= max_x - 5 && y >= max_y - 5 && mouse_pressed())

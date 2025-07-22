@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <windows.h>
 #include <tlhelp32.h>
+#include <shellapi.h>
 #include <psapi.h>
 #define pii pair<int, int>
 using namespace std;
@@ -9,6 +10,22 @@ int max_x = GetSystemMetrics(SM_CXSCREEN);
 int max_y = GetSystemMetrics(SM_CYSCREEN);
 #pragma comment(lib, "psapi.lib")
 string mythwarePath = "";
+
+
+BOOL IsRunAsAdministrator() {
+BOOL fIsRunAsAdmin = FALSE;
+PSID pAdministratorsGroup = NULL;
+SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &pAdministratorsGroup)) {
+return FALSE;
+}
+if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin)) {
+FreeSid(pAdministratorsGroup);
+return FALSE;
+}
+FreeSid(pAdministratorsGroup);
+return fIsRunAsAdmin;
+}
 
 string GetProcessPath(const char *processName)
 {
@@ -144,10 +161,43 @@ bool ToggleBroadcastWindow()
     return true;
 }
 
+bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
+{
+    HANDLE hToken = NULL;
+    LUID luidValue;
+    TOKEN_PRIVILEGES tokenPrivileges;
+    if (!OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, &hToken))
+    {
+        return FALSE;
+    }
+    if (!LookupPrivilegeValue(NULL, pszPrivilegesName, &luidValue))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    tokenPrivileges.PrivilegeCount = 1;
+    tokenPrivileges.Privileges[0].Luid = luidValue;
+    tokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tokenPrivileges, 0, NULL, NULL))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    CloseHandle(hToken);
+    return GetLastError() == ERROR_SUCCESS;
+}
+
 int main()
 {
     cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
 严禁搬运，转载，否则后果自负!)";
+    cout << "尝试提权......\n";
+    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
+        cout << "权限提升成功\n" << endl;
+    } else {
+        cout << "权限提升失败,部分功能可能会失效!\n" << endl;
+    }
+
     cout << "屏幕分辨率:" << max_x << "x" << max_y << "\n";
     PID = getPID("StudentMain.exe");
     if (PID == -1)

@@ -1,6 +1,7 @@
+#include <bits/stdc++.h>
 #include <windows.h>
 #include <tchar.h>
-
+using namespace std;
 // 键盘钩子相关变量
 HHOOK kbdHook;
 HANDLE hKeybdThread = NULL;
@@ -95,16 +96,42 @@ void StopKeyboardUnlock()
         kbdHook = NULL;
     }
 }
-
+bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
+{
+    HANDLE hToken = NULL;
+    LUID luidValue;
+    TOKEN_PRIVILEGES tokenPrivileges;
+    if (!OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, &hToken))
+    {
+        return FALSE;
+    }
+    if (!LookupPrivilegeValue(NULL, pszPrivilegesName, &luidValue))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    tokenPrivileges.PrivilegeCount = 1;
+    tokenPrivileges.Privileges[0].Luid = luidValue;
+    tokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tokenPrivileges, 0, NULL, NULL))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    CloseHandle(hToken);
+    return GetLastError() == ERROR_SUCCESS;
+}
 int main()
 {
-    // 启动解锁
+    cout << "尝试提权......\n";
+    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
+        cout << "权限提升成功! \n" << endl;
+    } else {
+        cout << "权限提升失败,功能可能会失效!\n" << endl;
+    }
     StartKeyboardUnlock();
 
-    MessageBox(NULL,
-               _T("键盘解锁已启动。点击确定后程序将继续在后台运行。"),
-               _T("极域键盘解锁工具"),
-               MB_OK | MB_ICONINFORMATION);
+    cout << "键盘解锁已启动!\n";
 
     // 保持程序运行
     MSG msg;

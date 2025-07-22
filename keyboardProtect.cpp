@@ -1,6 +1,9 @@
 #include <bits/stdc++.h>
 #include <windows.h>
 #include <tchar.h>
+#include <tlhelp32.h>
+#include <shellapi.h>
+#include <psapi.h>
 using namespace std;
 // 键盘钩子相关变量
 HHOOK kbdHook;
@@ -123,6 +126,8 @@ bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
 }
 int main()
 {
+    cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
+严禁搬运，转载，否则后果自负!)" << "\n";
     cout << "尝试提权......\n";
     if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
         cout << "权限提升成功! \n" << endl;

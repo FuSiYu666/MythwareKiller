@@ -1,4 +1,8 @@
 #include <bits/stdc++.h>
+#include <windows.h>
+#include <tlhelp32.h>
+#include <shellapi.h>
+#include <psapi.h>
 using namespace std;
 
 long getPID(string name)
@@ -29,13 +33,45 @@ long getPID(string name)
     return pid;
 }
 
+bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
+{
+    HANDLE hToken = NULL;
+    LUID luidValue;
+    TOKEN_PRIVILEGES tokenPrivileges;
+    if (!OpenProcessToken(hProcess, TOKEN_ADJUST_PRIVILEGES, &hToken))
+    {
+        return FALSE;
+    }
+    if (!LookupPrivilegeValue(NULL, pszPrivilegesName, &luidValue))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    tokenPrivileges.PrivilegeCount = 1;
+    tokenPrivileges.Privileges[0].Luid = luidValue;
+    tokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tokenPrivileges, 0, NULL, NULL))
+    {
+        CloseHandle(hToken);
+        return FALSE;
+    }
+    CloseHandle(hToken);
+    return GetLastError() == ERROR_SUCCESS;
+}
+
 int main()
 {
+    cout << "尝试提权......\n";
+    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
+        cout << "权限提升成功! \n" << endl;
+    } else {
+        cout << "权限提升失败,功能可能会失效!\n" << endl;
+    }
     while (1)
     {
         system("cls");
         cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-严禁搬运，转载，否则后果自负!)";
+严禁搬运，转载，否则后果自负!)" << "\n";
         cout << "极域全能工具箱\n";
         cout << "1. 解除U盘限制\n";
         cout << "2. 结束极域进程\n";

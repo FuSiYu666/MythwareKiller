@@ -15,6 +15,13 @@
 4. Toolbox.exe为集各种功能为一体的便携工具箱
 
 ## 编译
+### 一、自动编译(推荐)
+
+0. 准备条件：安装mingw64环境，安装upx工具，安装strip工具
+1. 启动脚本compile.cmd
+2. 编译完成后，所有可执行文件都会在 MythwareKillerCompiled 文件夹下
+
+### 二、手动编译
 使用mingw64环境编译，编译命令为：
 
 ```bash
@@ -27,5 +34,3 @@ g++ {程序名}.cpp -o {程序名} -O3 -Wall -g -std=c++17 -static
 strip {文件名}.exe
 upx {文件名}.exe
 ```
-
-P.S. upx需要额外安装

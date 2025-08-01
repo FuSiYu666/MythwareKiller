@@ -11,20 +11,22 @@ int max_y = GetSystemMetrics(SM_CYSCREEN);
 #pragma comment(lib, "psapi.lib")
 string mythwarePath = "";
 
-
-BOOL IsRunAsAdministrator() {
-BOOL fIsRunAsAdmin = FALSE;
-PSID pAdministratorsGroup = NULL;
-SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &pAdministratorsGroup)) {
-return FALSE;
-}
-if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin)) {
-FreeSid(pAdministratorsGroup);
-return FALSE;
-}
-FreeSid(pAdministratorsGroup);
-return fIsRunAsAdmin;
+BOOL IsRunAsAdministrator()
+{
+    BOOL fIsRunAsAdmin = FALSE;
+    PSID pAdministratorsGroup = NULL;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &pAdministratorsGroup))
+    {
+        return FALSE;
+    }
+    if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin))
+    {
+        FreeSid(pAdministratorsGroup);
+        return FALSE;
+    }
+    FreeSid(pAdministratorsGroup);
+    return fIsRunAsAdmin;
 }
 
 string GetProcessPath(const char *processName)
@@ -190,12 +192,17 @@ bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
 int main()
 {
     cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-严禁搬运，转载，否则后果自负!)" << "\n";
+软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
     cout << "尝试提权......\n";
-    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
-        cout << "权限提升成功\n" << endl;
-    } else {
-        cout << "权限提升失败,部分功能可能会失效!\n" << endl;
+    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME))
+    {
+        cout << "权限提升成功\n"
+             << endl;
+    }
+    else
+    {
+        cout << "权限提升失败,部分功能可能会失效!\n"
+             << endl;
     }
 
     cout << "屏幕分辨率:" << max_x << "x" << max_y << "\n";

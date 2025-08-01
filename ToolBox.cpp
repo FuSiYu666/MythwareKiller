@@ -71,7 +71,7 @@ int main()
     {
         system("cls");
         cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-严禁搬运，转载，否则后果自负!)" << "\n";
+软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
         cout << "极域全能工具箱\n";
         cout << "1. 解除U盘限制\n";
         cout << "2. 结束极域进程\n";

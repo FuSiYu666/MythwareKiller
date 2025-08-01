@@ -42,3 +42,15 @@ g++ {程序名}.cpp -o {程序名} -O3 -Wall -g -std=c++17 -static
 strip {文件名}.exe
 upx {文件名}.exe
 ```
+
+
+# Github Star History
+
+
+<a href="https://www.star-history.com/#FuSiYu666/MythwareKiller&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FuSiYu666/MythwareKiller&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=FuSiYu666/MythwareKiller&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FuSiYu666/MythwareKiller&type=Date" />
+ </picture>
+</a>

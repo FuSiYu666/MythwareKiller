@@ -35,6 +35,8 @@ for %%f in (%files%) do (
     )
 )
 
+copy pssuspend64.exe "!target_dir!"
+
 :: 使用Bandizip创建压缩文件
 echo [压缩中] 正在创建压缩文件...
 

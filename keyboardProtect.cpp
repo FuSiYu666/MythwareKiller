@@ -140,19 +140,38 @@ bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
     CloseHandle(hToken);
     return GetLastError() == ERROR_SUCCESS;
 }
+void logs(string message, bool isError = false) {
+    // 获取当前时间
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    
+    // 格式化时间戳
+    char timestamp[9];
+    sprintf(timestamp, "%02d:%02d:%02d", ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+    cout << "[" << timestamp << "] ";
+    // 根据isError参数设置颜色和文本
+    if (!isError) {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
+        cout << "ERROR ";
+    } else {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        cout << "SUCCESS ";
+    }
+    
+    // 输出日志内容并恢复默认颜色
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    cout << message << endl;
+}
 int main()
 {
-    cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
-    cout << "尝试提权......\n";
     if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
-        cout << "权限提升成功! \n" << endl;
+        logs("键盘保护工具权限提升成功!", true);
     } else {
-        cout << "权限提升失败,功能可能会失效!\n" << endl;
+        logs("键盘保护工具权限提升失败,功能可能会失效!", false);
     }
     StartKeyboardUnlock();
 
-    cout << "键盘解锁已启动!\n";
+    logs("键盘保护已启动", true);
 
     // 保持程序运行
     MSG msg;

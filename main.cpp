@@ -20,6 +20,9 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 #include <psapi.h>
+#include <winternl.h>
+#pragma comment(lib, "ntdll.lib")
+
 #define pii pair<int, int>
 using namespace std;
 long PID;
@@ -27,6 +30,46 @@ int max_x = GetSystemMetrics(SM_CXSCREEN);
 int max_y = GetSystemMetrics(SM_CYSCREEN);
 #pragma comment(lib, "psapi.lib")
 string mythwarePath = "";
+
+typedef NTSTATUS(NTSYSAPI NTAPI *NtSuspendProcess)(IN HANDLE Process);
+typedef NTSTATUS(NTSYSAPI NTAPI *NtResumeProcess)(IN HANDLE Process);
+BOOL SuspendProcess(DWORD dwProcessID, BOOL suspend) {
+    NtSuspendProcess mNtSuspendProcess;
+    NtResumeProcess mNtResumeProcess;
+    HMODULE ntdll = GetModuleHandle("ntdll.dll");
+    HANDLE handle = OpenProcess(PROCESS_SUSPEND_RESUME, FALSE, dwProcessID);
+    if (suspend) {
+        mNtSuspendProcess = (NtSuspendProcess)GetProcAddress(ntdll, "NtSuspendProcess");
+        return mNtSuspendProcess(handle) == 0;
+    } else {
+        mNtResumeProcess = (NtResumeProcess)GetProcAddress(ntdll, "NtResumeProcess");
+        return mNtResumeProcess(handle) == 0;
+    }
+}
+
+// 日志函数，按照指定格式输出日志信息
+void logs(string message, bool isError = false) {
+    // 获取当前时间
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    
+    // 格式化时间戳
+    char timestamp[9];
+    sprintf(timestamp, "%02d:%02d:%02d", ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+    cout << "[" << timestamp << "] ";
+    // 根据isError参数设置颜色和文本
+    if (!isError) {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
+        cout << "ERROR ";
+    } else {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        cout << "SUCCESS ";
+    }
+    
+    // 输出日志内容并恢复默认颜色
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    cout << message << endl;
+}
 
 BOOL IsRunAsAdministrator()
 {
@@ -129,12 +172,7 @@ long getPID(string name)
 
 bool mouse_pressed()
 {
-    // 检测鼠标是否左右键同时按下
-    if (GetAsyncKeyState(VK_LBUTTON) && GetAsyncKeyState(VK_RBUTTON))
-    {
-        return true;
-    }
-    return false;
+    return GetAsyncKeyState(VK_LBUTTON) && GetAsyncKeyState(VK_RBUTTON);
 }
 void killMythware()
 {
@@ -146,6 +184,9 @@ void pauseMythware()
 {
     string command = ".\\pssuspend64.exe " + to_string(PID);
     system(command.c_str());
+    
+    // 添加API调用挂起极域，双重方案
+    SuspendProcess(PID, TRUE);
 }
 
 void unblockNetwork()
@@ -210,86 +251,87 @@ int main()
 {
     cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
 软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
-    cout << "尝试提权......\n";
     if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME))
     {
-        cout << "权限提升成功\n"
-             << endl;
+        logs("权限提升成功", true);
     }
     else
     {
-        cout << "权限提升失败,部分功能可能会失效!\n"
-             << endl;
+        logs("权限提升失败,部分功能可能会失效!", false);
     }
 
-    cout << "屏幕分辨率:" << max_x << "x" << max_y << "\n";
+    logs("屏幕分辨率:" + to_string(max_x) + "x" + to_string(max_y), true);
     PID = getPID("StudentMain.exe");
     if (PID == -1)
-        cerr << "获取极域PID失败, 请确保极域已经启动并重试!\n";
+        logs("获取极域PID失败, 请确保极域已经启动并重试!", false);
     else
-        cout << "极域PID: " << PID << "\n";
+        logs("极域PID: " + to_string(PID), true);
     mythwarePath = GetProcessPath("StudentMain.exe");
     if (!mythwarePath.empty())
     {
-        cout << "极域安装路径: " << mythwarePath << endl;
+        logs("极域安装路径: " + mythwarePath, true);
     }
     else
     {
-        cerr << "未找到极域进程!\n";
+        logs("未找到极域进程!", false);
     }
-    system("start .\\keyboardProtect.exe");
-    cout << "键盘防护已启动! \n";
+    
+    // 使用CreateProcess后台运行keyboardProtect.exe
+    STARTUPINFO si = { sizeof(STARTUPINFO) };
+    PROCESS_INFORMATION pi;
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    CreateProcess(NULL, ".\\keyboardProtect.exe", NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
     _sleep(1000);
     while (1)
     {
         pii pos = getCursorPos();
         int x = pos.first;
         int y = pos.second;
-        cout << "x:" << x << " y:" << y << "  ";
+        cout << "x:" << x << " y:" << y << "\n";
         if (x <= 5 && y <= 5 && mouse_pressed())
         {
-            cout << "左上-终止极域  ";
             killMythware();
             PID = getPID("StudentMain.exe");
             if (PID != -1)
-                cout << "操作失败, 请重试!\n";
+                logs("终止极域失败, 请重试!", false);
             else
-                cout << "操作成功!\n";
+                logs("终止极域成功!", true);
         }
         if (x <= 5 && y >= max_y - 5 && mouse_pressed())
         {
-            cout << "左下-挂起极域  ";
             PID = getPID("StudentMain.exe");
             if (PID == -1)
-                cout << "获取PID失败, 请重试!\n";
+                logs("挂起极域-获取PID失败, 请重试!", false);
             else
+            {
                 pauseMythware();
+                logs("挂起极域成功!", true);
+            }
         }
         if (x >= max_x - 5 && y <= 5 && mouse_pressed())
         {
-            cout << "右上-使广播窗口化  ";
             bool status = ToggleBroadcastWindow();
             if (status)
-                cout << "操作成功! \n";
+                logs("使广播窗口化成功!", true);
             else
-                cout << "操作失败! \n";
+                logs("使广播窗口化失败!", false);
             _sleep(700);
         }
         if (x >= max_x - 5 && y >= max_y - 5 && mouse_pressed())
         {
-            cout << "右下-启动并重新获取极域进程PID  ";
             string command = "start " + mythwarePath;
             system(command.c_str());
-            cout << "极域已经启动!";
+            logs("极域已经启动!", true);
             _sleep(1000);
             PID = getPID("StudentMain.exe");
             if (PID == -1)
-                cerr << "获取极域PID失败, 请重试!\n";
+                logs("获取极域PID失败, 请重试!", false);
             else
-                cout << "极域PID: " << PID << "\n";
+                logs("极域PID: " + to_string(PID), true);
         }
-        else
-            cout << "\n";
         _sleep(50);
     }
 }

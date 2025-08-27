@@ -34,8 +34,11 @@ for %%f in (%files%) do (
         echo [错误] 编译 %%f 失败
     )
 )
-
+echo [复制中] 正在复制 pssuspend64.exe 到 !target_dir!...
 copy pssuspend64.exe "!target_dir!"
+
+echo [复制中] 正在复制 LICENSE 到 !target_dir!...
+copy LICENSE "!target_dir!"
 
 :: 使用Bandizip创建压缩文件
 echo [压缩中] 正在创建压缩文件...

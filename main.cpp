@@ -33,42 +33,120 @@ string mythwarePath = "";
 
 typedef NTSTATUS(NTSYSAPI NTAPI *NtSuspendProcess)(IN HANDLE Process);
 typedef NTSTATUS(NTSYSAPI NTAPI *NtResumeProcess)(IN HANDLE Process);
-BOOL SuspendProcess(DWORD dwProcessID, BOOL suspend) {
+BOOL SuspendProcess(DWORD dwProcessID, BOOL suspend)
+{
     NtSuspendProcess mNtSuspendProcess;
     NtResumeProcess mNtResumeProcess;
     HMODULE ntdll = GetModuleHandle("ntdll.dll");
     HANDLE handle = OpenProcess(PROCESS_SUSPEND_RESUME, FALSE, dwProcessID);
-    if (suspend) {
+    if (suspend)
+    {
         mNtSuspendProcess = (NtSuspendProcess)GetProcAddress(ntdll, "NtSuspendProcess");
         return mNtSuspendProcess(handle) == 0;
-    } else {
+    }
+    else
+    {
         mNtResumeProcess = (NtResumeProcess)GetProcAddress(ntdll, "NtResumeProcess");
         return mNtResumeProcess(handle) == 0;
     }
 }
+int logs_len = 15;
+void sys_quiet(string command)
+{
+    command += ">nul 2>&1";
+    system(command.c_str());
+}
+void setCursorPosition(int x, int y)
+{
+    static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coord = {(SHORT)x, (SHORT)y};
+    SetConsoleCursorPosition(hOut, coord);
+}
 
-// 日志函数，按照指定格式输出日志信息
-void logs(string message, bool isError = false) {
+// 清除指定行的内容
+void clearLine(int lineNumber)
+{
+    setCursorPosition(0, lineNumber);
+
+    // 获取控制台宽度
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    int consoleWidth = csbi.dwSize.X;
+
+    // 用空格覆盖整行
+    std::cout << std::string(consoleWidth, ' ');
+
+    // 将光标移回行首
+    setCursorPosition(0, lineNumber);
+}
+
+// 在指定行输出内容
+void writeToLine(int lineNumber, const std::string &content)
+{
+    clearLine(lineNumber);
+    std::cout << content;
+}
+
+// 隐藏光标减少闪烁
+void hideCursor()
+{
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(hOut, &cursorInfo);
+    cursorInfo.bVisible = false;
+    SetConsoleCursorInfo(hOut, &cursorInfo);
+}
+
+// 输出日志
+void logs(string message, bool isError = false)
+{
+    int lineNumber = ++logs_len;
+    // 保存原始光标位置
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    COORD originalPos = csbi.dwCursorPosition;
+
+    // 移动到目标行
+    setCursorPosition(0, lineNumber);
+
     // 获取当前时间
     time_t now = time(0);
     tm *ltm = localtime(&now);
-    
+
     // 格式化时间戳
-    char timestamp[9];
-    sprintf(timestamp, "%02d:%02d:%02d", ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
-    cout << "[" << timestamp << "] ";
-    // 根据isError参数设置颜色和文本
-    if (!isError) {
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
+    cout << "["
+         << setw(2) << setfill('0') << ltm->tm_hour << ":"
+         << setw(2) << setfill('0') << ltm->tm_min << ":"
+         << setw(2) << setfill('0') << ltm->tm_sec << "] ";
+
+    // 设置日志级别颜色和文本
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!isError)
+    {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
         cout << "ERROR ";
-    } else {
-        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    }
+    else
+    {
+        SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
         cout << "SUCCESS ";
     }
-    
+
     // 输出日志内容并恢复默认颜色
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    cout << message << endl;
+    SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    cout << message;
+
+    // 清除行剩余部分
+    CONSOLE_SCREEN_BUFFER_INFO newCsbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &newCsbi);
+    int remainingWidth = newCsbi.dwSize.X - newCsbi.dwCursorPosition.X;
+    if (remainingWidth > 0)
+    {
+        cout << string(remainingWidth, ' ');
+    }
+
+    // 恢复原始光标位置
+    setCursorPosition(originalPos.X, originalPos.Y);
 }
 
 BOOL IsRunAsAdministrator()
@@ -176,24 +254,24 @@ bool mouse_pressed()
 }
 void killMythware()
 {
-    system("taskkill /f /im StudentMain.exe /t");
-    system("taskkill /f /im MasterHelper.exe /t");
+    sys_quiet("taskkill /f /im StudentMain.exe /t");
+    sys_quiet("taskkill /f /im MasterHelper.exe /t");
 }
 
 void pauseMythware()
 {
     string command = ".\\pssuspend64.exe " + to_string(PID);
-    system(command.c_str());
-    
+    sys_quiet(command.c_str());
+
     // 添加API调用挂起极域，双重方案
     SuspendProcess(PID, TRUE);
 }
 
 void unblockNetwork()
 {
-    system("taskkill /f /im MasterHelper.exe /t");
-    system("sc stop tdnetfilter");
-    system("netsh advfirewall set allprofiles state off");
+    sys_quiet("taskkill /f /im MasterHelper.exe /t");
+    sys_quiet("sc stop tdnetfilter");
+    sys_quiet("netsh advfirewall set allprofiles state off");
 }
 
 void RestoreWindowFreedom(HWND hWnd)
@@ -249,8 +327,23 @@ bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
 
 int main()
 {
-    cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
+    hideCursor();
+    writeToLine(0, "");
+    writeToLine(1, "   MythwareKiller-2.0.0");
+    writeToLine(2, "");
+    writeToLine(3, "=================================================");
+    writeToLine(4, "本软件位于Github仓库FuSiYu666/MythwareKiller, 完全开源免费使用");
+    writeToLine(5, "本软件仅供学习使用，不得用于其他用途，否则后果自负！");
+    writeToLine(6, "使用本软件默认您同意LICENSE文件下的GPL-3.0 license协议");
+    writeToLine(7, "Copyright (C) 2025 FSY");
+    writeToLine(8, "=================================================");
+    writeToLine(9, "当前极域是否正在运行: 获取中");
+    writeToLine(10, "当前极域进程PID: 获取中");
+    writeToLine(11, "当前极域安装路径: 获取中");
+    writeToLine(12, "当前屏幕分辨率: 获取中");
+    writeToLine(13, "当前鼠标位置: x:获取中 y:获取中");
+    writeToLine(14, "=================================================");
+    writeToLine(15, "日志:");
     if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME))
     {
         logs("权限提升成功", true);
@@ -260,24 +353,37 @@ int main()
         logs("权限提升失败,部分功能可能会失效!", false);
     }
 
+    writeToLine(12, "当前屏幕分辨率: " + to_string(max_x) + "x" + to_string(max_y));
     logs("屏幕分辨率:" + to_string(max_x) + "x" + to_string(max_y), true);
+
     PID = getPID("StudentMain.exe");
+
     if (PID == -1)
+    {
         logs("获取极域PID失败, 请确保极域已经启动并重试!", false);
+        writeToLine(9, "当前极域是否正在运行：否");
+        writeToLine(10, "当前极域进程PID: 无");
+    }
     else
+    {
         logs("极域PID: " + to_string(PID), true);
+        writeToLine(9, "当前极域是否正在运行：是");
+        writeToLine(10, "当前极域进程PID: " + to_string(PID));
+    }
     mythwarePath = GetProcessPath("StudentMain.exe");
     if (!mythwarePath.empty())
     {
         logs("极域安装路径: " + mythwarePath, true);
+        writeToLine(11, "当前极域安装路径: " + mythwarePath);
     }
     else
     {
         logs("未找到极域进程!", false);
+        writeToLine(11, "当前极域安装路径: 获取失败");
     }
-    
+
     // 使用CreateProcess后台运行keyboardProtect.exe
-    STARTUPINFO si = { sizeof(STARTUPINFO) };
+    STARTUPINFO si = {sizeof(STARTUPINFO)};
     PROCESS_INFORMATION pi;
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
@@ -290,25 +396,39 @@ int main()
         pii pos = getCursorPos();
         int x = pos.first;
         int y = pos.second;
-        cout << "x:" << x << " y:" << y << "\n";
+        writeToLine(13, "当前鼠标位置: x:" + to_string(x) + " y:" + to_string(y));
         if (x <= 5 && y <= 5 && mouse_pressed())
         {
             killMythware();
             PID = getPID("StudentMain.exe");
             if (PID != -1)
+            {
+                writeToLine(10, "当前极域进程PID: " + to_string(PID));
+                writeToLine(9, "当前极域是否正在运行：是");
                 logs("终止极域失败, 请重试!", false);
+            }
             else
+            {
+                writeToLine(10, "当前极域进程PID: 无");
+                writeToLine(9, "当前极域是否正在运行：否");
                 logs("终止极域成功!", true);
+            }
         }
         if (x <= 5 && y >= max_y - 5 && mouse_pressed())
         {
             PID = getPID("StudentMain.exe");
             if (PID == -1)
+            {
                 logs("挂起极域-获取PID失败, 请重试!", false);
+                writeToLine(10, "当前极域进程PID: 无");
+                writeToLine(9, "当前极域是否正在运行：否");
+            }
             else
             {
                 pauseMythware();
                 logs("挂起极域成功!", true);
+                writeToLine(10, "当前极域进程PID: " + to_string(PID));
+                writeToLine(9, "当前极域是否正在运行：挂起");
             }
         }
         if (x >= max_x - 5 && y <= 5 && mouse_pressed())
@@ -322,15 +442,22 @@ int main()
         }
         if (x >= max_x - 5 && y >= max_y - 5 && mouse_pressed())
         {
-            string command = "start " + mythwarePath;
-            system(command.c_str());
-            logs("极域已经启动!", true);
-            _sleep(1000);
+            string command = "start \"\" \"" + mythwarePath + "\"";
+            sys_quiet(command.c_str());
+            _sleep(1500);
             PID = getPID("StudentMain.exe");
             if (PID == -1)
-                logs("获取极域PID失败, 请重试!", false);
+            {
+                writeToLine(10, "当前极域进程PID: 无");
+                writeToLine(9, "当前极域是否正在运行：否");
+                logs("极域启动失败, 请重试!", false);
+            }
             else
-                logs("极域PID: " + to_string(PID), true);
+            {
+                writeToLine(10, "当前极域进程PID: " + to_string(PID));
+                writeToLine(9, "当前极域是否正在运行：是");
+                logs("极域启动成功! PID: " + to_string(PID), true);
+            }
         }
         _sleep(50);
     }

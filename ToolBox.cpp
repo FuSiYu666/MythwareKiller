@@ -50,24 +50,28 @@ long getPID(string name)
     return pid;
 }
 // 日志函数，按照指定格式输出日志信息
-void logs(string message, bool isError = false) {
+void logs(string message, bool isError = false)
+{
     // 获取当前时间
     time_t now = time(0);
     tm *ltm = localtime(&now);
-    
+
     // 格式化时间戳
     char timestamp[9];
     sprintf(timestamp, "%02d:%02d:%02d", ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
     cout << "[" << timestamp << "] ";
     // 根据isError参数设置颜色和文本
-    if (!isError) {
+    if (!isError)
+    {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_INTENSITY);
         cout << "ERROR ";
-    } else {
+    }
+    else
+    {
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
         cout << "SUCCESS ";
     }
-    
+
     // 输出日志内容并恢复默认颜色
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
     cout << message << endl;
@@ -100,16 +104,20 @@ bool EnablePrivileges(HANDLE hProcess, const char *pszPrivilegesName)
 
 int main()
 {
-    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME)) {
+    if (EnablePrivileges(GetCurrentProcess(), SE_SHUTDOWN_NAME))
+    {
         logs("权限提升成功!", true);
-    } else {
+    }
+    else
+    {
         logs("权限提升失败,功能可能会失效!", false);
     }
     while (1)
     {
         system("cls");
         cout << R"(声明:本软件仅供学习使用，不得用于其他用途，否则后果自负!
-软件位于Github仓库: FuSiYu666/MythwareKiller)" << endl;
+软件位于Github仓库: FuSiYu666/MythwareKiller)"
+             << endl;
         cout << "极域全能工具箱\n";
         cout << "1. 解除U盘限制\n";
         cout << "2. 结束极域进程\n";

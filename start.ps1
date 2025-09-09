@@ -14,7 +14,8 @@ $global:Config = @{
     
     # Download settings
     DownloadDir = "$env:USERPROFILE\!MythwareKiller"
-    MainExecutable = "MythwareKiller.exe"
+    MainExecutable = "main.exe"
+    Version = "2.0.0"  # 定义版本号
     
     # Archive download options with multiple mirrors
     ArchiveOptions = @{
@@ -386,7 +387,7 @@ if (-not $args) {
     # Let user select archive format
     $selectedFormat = Get-ArchiveFormat
     $archiveUrls = $global:Config.ArchiveOptions[$selectedFormat]
-    $archiveName = "$($global:Config.ToolName).$($selectedFormat.ToLower())"
+    $archiveName = "$($global:Config.ToolName)-$($global:Config.Version).$($selectedFormat.ToLower())"
     $archivePath = Join-Path -Path $global:Config.DownloadDir -ChildPath $archiveName
 
     # Download the selected archive
@@ -404,7 +405,7 @@ if (-not $args) {
     }
 
     # Run the main executable after extraction
-    $mainExecutable = Join-Path -Path $global:Config.DownloadDir -ChildPath $global:Config.MainExecutable
+    $mainExecutable = Join-Path -Path $global:Config.DownloadDir -ChildPath "$($global:Config.ToolName)-$($global:Config.Version)" | Join-Path -ChildPath $global:Config.MainExecutable
     if (Test-Path $mainExecutable) {
         Write-Host "`nStarting $($global:Config.ToolName)..." -ForegroundColor $global:Config.Colors.Info
         Write-Host "For more information, visit: $($global:Config.Homepage)" -ForegroundColor $global:Config.Colors.Debug

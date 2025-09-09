@@ -96,24 +96,6 @@ if (-not $args) {
         }
     }
 
-    # Let user select archive format
-    function Get-ArchiveFormat {
-        Write-Host "`nSelect download format:" -ForegroundColor $global:Config.Colors.Info
-        $options = $global:Config.ArchiveOptions.Keys | Sort-Object
-        for ($i = 0; $i -lt $options.Count; $i++) {
-            Write-Host "$($i+1). $($options[$i])" -ForegroundColor $global:Config.Colors.Highlight
-        }
-        
-        do {
-            $choice = Read-Host "Enter your choice (1-$($options.Count))"
-            $valid = $choice -match "^\d+$" -and [int]$choice -ge 1 -and [int]$choice -le $options.Count
-            if (-not $valid) {
-                Write-Host "Invalid selection. Please enter a number between 1 and $($options.Count)" -ForegroundColor $global:Config.Colors.Warning
-            }
-        } while (-not $valid)
-        
-        return $options[[int]$choice-1]
-    }
 
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 
@@ -385,7 +367,7 @@ if (-not $args) {
     }
 
     # Let user select archive format
-    $selectedFormat = Get-ArchiveFormat
+    $selectedFormat = "ZIP"  # 自动选择ZIP格式
     $archiveUrls = $global:Config.ArchiveOptions[$selectedFormat]
     $archiveName = "$($global:Config.ToolName)-$($global:Config.Version).$($selectedFormat.ToLower())"
     $archivePath = Join-Path -Path $global:Config.DownloadDir -ChildPath $archiveName
